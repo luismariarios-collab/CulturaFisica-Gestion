@@ -65,20 +65,21 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-se
 .nav-icon{font-size:1.2rem;}
 
 /* HERO ALUMNO */
-.hero{position:relative;background:linear-gradient(180deg,#0d1f3c 0%,#0a0a0f 100%);padding:20px 16px 16px;overflow:hidden;}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(61,142,248,.25),transparent 60%);}
-.hero-saludo{font-size:.72rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
-.hero-nombre{font-size:1.6rem;font-weight:800;color:var(--white);margin-bottom:6px;}
-.hero-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.hero-badge{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;}
+.hero{position:relative;background:linear-gradient(160deg,#0d1f3c 0%,#111128 60%,#0a0a0f 100%);padding:22px 16px 18px;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(61,142,248,.3),transparent 70%);border-radius:50%;}
+.hero::after{content:'';position:absolute;bottom:-20px;left:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(91,163,255,.15),transparent 70%);border-radius:50%;}
+.hero-saludo{font-size:.7rem;color:rgba(255,255,255,.45);letter-spacing:2px;text-transform:uppercase;margin-bottom:2px;}
+.hero-nombre{font-size:1.8rem;font-weight:800;color:var(--white);margin-bottom:8px;line-height:1.1;}
+.hero-badges{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+.hero-badge{font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px;}
 .badge-activo{background:rgba(61,142,248,.2);border:1px solid var(--accent);color:var(--accent);}
 .badge-aldia{background:rgba(34,197,94,.2);border:1px solid var(--green);color:var(--green);}
 .badge-debe{background:rgba(239,68,68,.2);border:1px solid var(--red);color:var(--red);}
-.hero-accesos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;}
-.acceso-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .2s;}
-.acceso-btn:hover{border-color:var(--accent);background:rgba(61,142,248,.1);}
+.hero-accesos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.acceso-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:11px 6px;text-align:center;cursor:pointer;transition:all .2s;}
+.acceso-btn:hover{border-color:var(--accent);background:rgba(61,142,248,.12);}
 .acceso-icon{font-size:1.3rem;margin-bottom:4px;}
-.acceso-label{font-size:.65rem;color:var(--muted);font-weight:600;}
+.acceso-label{font-size:.64rem;color:rgba(255,255,255,.6);font-weight:600;}
 
 /* CARNET */
 .pad{padding:14px 16px;}
@@ -306,9 +307,19 @@ function initDB() {
       {id:2,texto:"Este mes no hay clases el dia 20 de junio",fecha:"2026-06-10"}
     ]
   };
-  var hoy = mesKey(new Date());
-  db.alumnos[0].pagos[hoy] = "pagado";
-  db.alumnos[2].pagos[hoy] = "pagado";
+  // Maria: pagada este mes y los 3 anteriores
+  var hoy = new Date();
+  var key = mesKey(hoy);
+  db.alumnos[0].pagos[key] = "pagado";
+  for(var m=1;m<=3;m++){
+    var d=new Date(hoy.getFullYear(),hoy.getMonth()-m,1);
+    db.alumnos[0].pagos[mesKey(d)]="pagado";
+  }
+  // Sofia: pagada este mes
+  db.alumnos[2].pagos[key] = "pagado";
+  // Lucas: debe este mes y el anterior (demo de deuda acumulada)
+  var mesAnterior = new Date(hoy.getFullYear(),hoy.getMonth()-1,1);
+  db.alumnos[1].pagos[mesKey(mesAnterior)] = "pendiente";
   saveDB(db);
   return db;
 }
@@ -525,12 +536,17 @@ function buildMiCuenta() {
   var monto=db.config.cuotaMonto;
   var hoy=new Date();
   var key=mesKey(hoy);
-  var est=estadoPago(alumno);
 
-  // Calcula saldo total pendiente
+  // Busca todos los meses pendientes (hasta 6 meses atras + mes actual)
   var mesesPendientes=[];
-  // Mes actual
-  if(est!=="pagado") mesesPendientes.push({key:key,label:mesLabel(key),monto:monto});
+  for(var m=5;m>=0;m--){
+    var d=new Date(hoy.getFullYear(),hoy.getMonth()-m,1);
+    var k=mesKey(d);
+    var v=alumno.pagos[k];
+    if(v==="pendiente"||(m===0&&v!=="pagado")){
+      mesesPendientes.push({key:k,label:mesLabel(k),monto:monto});
+    }
+  }
   var totalDeuda=mesesPendientes.length*monto;
 
   var html='<div class="pad">';
