@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cultura Física Villegas</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#3d8ef8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CulturaFisica">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -231,6 +235,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-se
     </div>
     <button class="btn-primary" onclick="doLogin()">Ingresar</button>
     <p class="login-error" id="loginErr">Usuario o contraseña incorrectos</p>
+    <div style="margin-top:20px;text-align:center;border-top:1px solid var(--border);padding-top:14px;">
+      <button onclick="resetearDatos()" style="background:transparent;border:none;color:var(--muted);font-size:.72rem;cursor:pointer;text-decoration:underline;">Resetear datos de prueba</button>
+    </div>
   </div>
 </div>
 
@@ -884,7 +891,20 @@ function openModal(){document.getElementById("modalOverlay").style.display="flex
 function closeModal(){document.getElementById("modalOverlay").style.display="none";}
 function showToast(msg){var t=document.getElementById("toast");t.textContent=msg;t.style.display="block";setTimeout(function(){t.style.display="none";},2200);}
 
-window.onload=function(){runSplash();};
+function resetearDatos(){
+  localStorage.clear();
+  sessionStorage.clear();
+  showToast("Datos reseteados");
+  setTimeout(function(){location.reload();},800);
+}
+
+window.onload=function(){
+  // PWA: registrar service worker si el browser lo soporta
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  }
+  runSplash();
+};
 </script>
 </body>
 </html>
