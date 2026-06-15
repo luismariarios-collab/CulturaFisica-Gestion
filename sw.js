@@ -1,16 +1,19 @@
-var CACHE = 'cfv-v1';
-var FILES = ['/', '/index.html'];
+var CACHE = 'cfv-v2';
 
 self.addEventListener('install', function(e) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(e) {
   e.waitUntil(
-    caches.open(CACHE).then(function(c) { return c.addAll(FILES); })
+    caches.keys().then(function(keys) {
+      return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+    })
   );
 });
 
 self.addEventListener('fetch', function(e) {
-  e.respondWith(
-    caches.match(e.request).then(function(r) {
-      return r || fetch(e.request);
-    })
-  );
+  e.respondWith(fetch(e.request).catch(function() {
+    return caches.match(e.request);
+  }));
 });
