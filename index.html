@@ -512,8 +512,6 @@ function buildCarnet() {
   var iniciales=alumno.nombre.split(" ").map(function(n){return n[0];}).join("").substring(0,2).toUpperCase();
   var est=estadoPago(alumno);
   var key=mesKey(new Date());
-  var qrData="CFV|"+alumno.id+"|"+alumno.nombre+"|"+alumno.dni+"|"+(est==="pagado"?"ALDÍA":"DEBE");
-  var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data="+encodeURIComponent(qrData)+"&bgcolor=1a2a4a&color=ffffff&margin=4";
 
   return '<div class="section-title">&#x1F4CB; Mi Carnet</div>'+
     '<div class="carnet">'+
@@ -527,43 +525,26 @@ function buildCarnet() {
     '<div class="carnet-dato"><div class="carnet-dato-label">Horario</div><div class="carnet-dato-val">'+alumno.turno+'</div></div>'+
     '</div>'+
     '<div class="carnet-footer">'+
-    '<div>'+
-    '<div class="carnet-footer-info">DNI</div>'+
-    '<div class="carnet-footer-info"><strong>'+alumno.dni+'</strong></div>'+
-    '<div style="margin-top:6px;">'+
-    '<div class="carnet-footer-info">'+mesLabel(key)+'</div>'+
+    '<div><div class="carnet-footer-info">DNI</div><div class="carnet-footer-info"><strong>'+alumno.dni+'</strong></div></div>'+
+    '<div style="text-align:right;"><div class="carnet-footer-info">'+mesLabel(key)+'</div>'+
     '<span class="badge '+(est==="pagado"?"badge-green":"badge-red")+'">'+(est==="pagado"?"Al dia":"Pendiente")+'</span>'+
-    '</div></div>'+
-    '<div style="text-align:center;">'+
-    '<img src="'+qrUrl+'" style="width:80px;height:80px;border-radius:6px;border:2px solid rgba(255,255,255,.2);" alt="QR">'+
-    '<div style="font-size:.58rem;color:rgba(255,255,255,.4);margin-top:3px;">Escanear para verificar</div>'+
     '</div></div></div>'+
     '<div class="card" style="margin-top:12px;"><div class="card-title">Gimnasio</div>'+
     '<div style="font-size:.88rem;color:var(--text);">Cultura Fisica Villegas</div>'+
     '<div style="font-size:.78rem;color:var(--muted);margin-top:3px;">Gimnasia Artistica</div></div>';
 }
 
+/* MI CUENTA - CON TILDE */
 function buildMiCuenta() {
   var db=getDB();
   var alumno=null;
   for(var i=0;i<db.alumnos.length;i++){if(db.alumnos[i].id===currentUser.id){alumno=db.alumnos[i];break;}}
   if(!alumno) return "<p>Error</p>";
-
-  var html='<div class="section-title">&#x1F4B3; Mi Cuenta</div>';
-  // Tabs
-  html+='<div style="display:flex;background:var(--surface);border-radius:10px;padding:3px;margin-bottom:14px;overflow-x:auto;gap:2px;">'+
-    '<button class="mc-tab active" id="mct_estado" onclick="showMCTab(\'estado\')" style="flex:1;min-width:70px;padding:8px 4px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;">Estado</button>'+
-    '<button class="mc-tab" id="mct_perfil" onclick="showMCTab(\'perfil\')" style="flex:1;min-width:70px;padding:8px 4px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;">Perfil</button>'+
-    '<button class="mc-tab" id="mct_seguridad" onclick="showMCTab(\'seguridad\')" style="flex:1;min-width:70px;padding:8px 4px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;">Seguridad</button>'+
-    '<button class="mc-tab" id="mct_notif" onclick="showMCTab(\'notif\')" style="flex:1;min-width:70px;padding:8px 4px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;">Contacto</button>'+
-    '</div>';
-  html+='<div id="mc_content">'+buildMCTab_Estado(alumno,db)+'</div>';
-  return html;
-}
-
-function buildMCTab_Estado(alumno,db) {
   var monto=db.config.cuotaMonto;
   var hoy=new Date();
+  var key=mesKey(hoy);
+
+  // Busca todos los meses pendientes (hasta 6 meses atras + mes actual)
   var mesesPendientes=[];
   for(var m=5;m>=0;m--){
     var d=new Date(hoy.getFullYear(),hoy.getMonth()-m,1);
@@ -574,122 +555,6 @@ function buildMCTab_Estado(alumno,db) {
     }
   }
   var totalDeuda=mesesPendientes.length*monto;
-  var html='';
-  if(totalDeuda>0){
-    html+='<div class="saldo-card"><div class="saldo-label">Saldo total adeudado</div><div class="saldo-monto">$'+totalDeuda.toLocaleString("es-AR")+',00</div></div>';
-  } else {
-    html+='<div class="saldo-card" style="border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.05);"><div class="saldo-label">Estado de cuenta</div><div class="saldo-monto saldo-aldia">Al dia</div></div>';
-  }
-  html+='<div style="font-size:.88rem;font-weight:800;color:var(--white);margin-bottom:10px;">A pagar</div>';
-  if(mesesPendientes.length===0){
-    html+='<div class="card"><div class="empty-state"><div class="empty-icon">&#x2705;</div><div style="color:var(--green);font-weight:700;">Sin cuotas pendientes</div></div></div>';
-  } else {
-    for(var i=0;i<mesesPendientes.length;i++){
-      var mp=mesesPendientes[i];
-      var sel=cuotasSeleccionadas[mp.key]||false;
-      html+='<div class="cuota-item'+(sel?" selected":"")+'" onclick="toggleCuota(\''+mp.key+'\')" id="cuota_'+mp.key+'">'+
-        '<div class="cuota-check'+(sel?" checked":"")+'" id="check_'+mp.key+'">'+(sel?'<span class="cuota-check-mark">&#x2713;</span>':'')+
-        '</div>'+
-        '<div class="cuota-info"><div class="cuota-nombre">Cuota '+mp.label+'</div><div class="cuota-detalle">&#x1F4C5; Vence fin de mes</div></div>'+
-        '<div style="text-align:right;"><div class="cuota-monto">+ $'+mp.monto.toLocaleString("es-AR")+',00</div>'+
-        '<span class="cuota-estado estado-pendiente">&#x23F0; PENDIENTE</span></div></div>';
-    }
-    html+='<div class="total-pagar" id="totalPagarBox"><div><div class="total-label">Total seleccionado</div><div class="total-monto" id="totalMonto">$0</div></div><div style="font-size:.72rem;color:var(--muted);" id="cantSelec">0 items</div></div>';
-    html+='<button class="btn-pagar" id="btnPagarMP" onclick="pagarMP()" disabled>&#x1F4B3; Pagar con Mercado Pago</button>';
-  }
-  // Historial
-  html+='<div style="font-size:.88rem;font-weight:800;color:var(--white);margin:14px 0 10px;">Historial de pagos</div><div class="card">';
-  var keys=Object.keys(alumno.pagos).sort().reverse();
-  if(keys.length===0){html+='<div class="empty-state"><div class="empty-icon">&#x1F4C5;</div><div>Sin pagos registrados</div></div>';}
-  else{for(var j=0;j<Math.min(keys.length,6);j++){var k2=keys[j];var v2=alumno.pagos[k2];html+='<div class="alumno-row"><div style="font-size:.85rem;font-weight:700;">'+mesLabel(k2)+'</div><span class="badge '+(v2==="pagado"?"badge-green":"badge-red")+'">'+(v2==="pagado"?"Pagado":"Pendiente")+'</span></div>';}}
-  html+='</div>';
-  return html;
-}
-
-function buildMCTab_Perfil(alumno) {
-  return '<div class="card"><div class="card-title">&#x1F6E1; Credenciales</div>'+
-    '<div class="alumno-row"><div><div style="font-size:.72rem;color:var(--muted);">Nombre</div><div style="font-weight:700;">'+alumno.nombre+'</div></div></div>'+
-    '<div class="alumno-row"><div><div style="font-size:.72rem;color:var(--muted);">DNI</div><div style="font-weight:700;">'+alumno.dni+'</div></div></div>'+
-    '<div class="alumno-row"><div><div style="font-size:.72rem;color:var(--muted);">Rol</div><div style="font-weight:700;">Alumno</div></div></div>'+
-    '</div>'+
-    '<div class="card"><div class="card-title">&#x1F3EB; Datos del gimnasio</div>'+
-    '<div class="alumno-row"><div><div style="font-size:.72rem;color:var(--muted);">Nivel</div><div style="font-weight:700;">'+alumno.nivel+'</div></div></div>'+
-    '<div class="alumno-row"><div><div style="font-size:.72rem;color:var(--muted);">Horario</div><div style="font-weight:700;">'+alumno.turno+'</div></div></div>'+
-    '<div class="alumno-row"><div><div style="font-size:.72rem;color:var(--muted);">Estado</div><div style="font-weight:700;color:var(--green);">ACTIVO</div></div></div>'+
-    '</div>';
-}
-
-function buildMCTab_Seguridad(alumno) {
-  return '<div class="card"><div class="card-title">&#x1F512; Cambiar contrasena</div>'+
-    '<p style="font-size:.78rem;color:var(--muted);margin-bottom:12px;">La contrasena debe tener al menos 4 caracteres.</p>'+
-    '<div class="form-row"><label>Contrasena actual</label><input type="password" id="passActual" placeholder="Contrasena actual"></div>'+
-    '<div class="form-row"><label>Nueva contrasena</label><input type="password" id="passNueva" placeholder="Nueva contrasena"></div>'+
-    '<div class="form-row"><label>Confirmar nueva</label><input type="password" id="passConfirm" placeholder="Repetir nueva contrasena"></div>'+
-    '<button class="btn-submit" onclick="cambiarPassword('+alumno.id+')">Actualizar contrasena</button>'+
-    '</div>';
-}
-
-function buildMCTab_Notif(alumno) {
-  var tel = alumno.telefono || "";
-  return '<div class="card"><div class="card-title">&#x1F4F1; Contacto WhatsApp</div>'+
-    '<p style="font-size:.78rem;color:var(--muted);margin-bottom:12px;">Tu numero para que el profe pueda contactarte por WhatsApp.</p>'+
-    '<div class="form-row"><label>Numero (sin +54)</label><input type="tel" id="telAlumno" placeholder="Ej: 3388123456" value="'+tel+'"></div>'+
-    '<button class="btn-submit" onclick="guardarTelefono('+alumno.id+')">Guardar numero</button>'+
-    '</div>';
-}
-
-function showMCTab(tab) {
-  var tabs=["estado","perfil","seguridad","notif"];
-  for(var i=0;i<tabs.length;i++){
-    var el=document.getElementById("mct_"+tabs[i]);
-    if(el){
-      if(tabs[i]===tab){el.style.background="var(--accent)";el.style.color="#fff";}
-      else{el.style.background="transparent";el.style.color="var(--muted)";}
-    }
-  }
-  var db=getDB();
-  var alumno=null;
-  for(var i=0;i<db.alumnos.length;i++){if(db.alumnos[i].id===currentUser.id){alumno=db.alumnos[i];break;}}
-  var mc=document.getElementById("mc_content");
-  if(!mc||!alumno) return;
-  if(tab==="estado") mc.innerHTML=buildMCTab_Estado(alumno,db);
-  else if(tab==="perfil") mc.innerHTML=buildMCTab_Perfil(alumno);
-  else if(tab==="seguridad") mc.innerHTML=buildMCTab_Seguridad(alumno);
-  else if(tab==="notif") mc.innerHTML=buildMCTab_Notif(alumno);
-}
-
-function cambiarPassword(id) {
-  var actual=document.getElementById("passActual").value;
-  var nueva=document.getElementById("passNueva").value;
-  var confirm=document.getElementById("passConfirm").value;
-  if(!actual||!nueva||!confirm){showToast("Completa todos los campos");return;}
-  if(nueva!==confirm){showToast("Las contrasenas no coinciden");return;}
-  if(nueva.length<4){showToast("Minimo 4 caracteres");return;}
-  var db=getDB();
-  for(var i=0;i<db.alumnos.length;i++){
-    if(db.alumnos[i].id===id){
-      if(db.alumnos[i].pass!==actual){showToast("Contrasena actual incorrecta");return;}
-      db.alumnos[i].pass=nueva;
-      break;
-    }
-  }
-  saveDB(db);
-  showToast("Contrasena actualizada");
-  document.getElementById("passActual").value="";
-  document.getElementById("passNueva").value="";
-  document.getElementById("passConfirm").value="";
-}
-
-function guardarTelefono(id) {
-  var tel=document.getElementById("telAlumno").value.trim();
-  if(!tel){showToast("Ingresa tu numero");return;}
-  var db=getDB();
-  for(var i=0;i<db.alumnos.length;i++){
-    if(db.alumnos[i].id===id){db.alumnos[i].telefono=tel;break;}
-  }
-  saveDB(db);
-  showToast("Numero guardado");
-}
 
   var html='<div class="pad">';
   html+='<div class="section-title">&#x1F4B3; Mi Cuenta</div>';
@@ -992,14 +857,10 @@ function modalEditarAlumno(id) {
   for(var i=0;i<db.alumnos.length;i++){if(db.alumnos[i].id===id){alumno=db.alumnos[i];break;}}
   if(!alumno)return;
   var key=mesKey(new Date());var est=estadoPago(alumno);
-  var tel=alumno.telefono||"";
   document.getElementById("modalTitle").textContent=alumno.nombre;
   document.getElementById("modalBody").innerHTML=
     '<p style="font-size:.8rem;color:var(--muted);margin-bottom:8px;">DNI: '+alumno.dni+' | '+alumno.nivel+'</p>'+
-    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:4px;">Horario: '+alumno.turno+'</p>'+
-    (tel?'<p style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">&#x1F4F1; '+tel+
-    ' <a href="https://wa.me/54'+tel+'" target="_blank" style="color:var(--green);font-weight:700;margin-left:8px;">WhatsApp</a></p>':
-    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">Sin numero de WhatsApp</p>')+
+    '<p style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">Horario: '+alumno.turno+'</p>'+
     '<div style="margin-bottom:14px;"><strong style="font-size:.82rem;">'+mesLabel(key)+':</strong> '+
     '<span class="badge '+(est==="pagado"?"badge-green":"badge-red")+'">'+(est==="pagado"?"Pagado":"Pendiente")+'</span></div>'+
     (est!=="pagado"?'<button class="btn-submit" onclick="marcarPagado('+id+');closeModal();" style="margin-bottom:8px;">Marcar como pagado</button>':'')+
@@ -1038,16 +899,12 @@ function resetearDatos(){
 }
 
 window.onload=function(){
-  // Set logos immediately before anything else
-  var logoEls=["splashLogo","loginLogo","topLogo","sidebarLogo"];
-  for(var i=0;i<logoEls.length;i++){var el=document.getElementById(logoEls[i]);if(el)el.src=LOGO_SRC;}
-  {
   // PWA: registrar service worker si el browser lo soporta
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').catch(function(){});
   }
   runSplash();
-}};
+};
 </script>
 </body>
 </html>
